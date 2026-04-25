@@ -7,12 +7,12 @@ Flow:
   query → embed → FAISS top-k → build prompt → LLM (or extractive fallback)
 
 LLM priority:
-  1. OpenAI GPT if OPENAI_API_KEY is set
+  1. Groq if GROQ_API_KEY is set (fast, free tier available)
   2. Extractive answer (concatenate top chunks) — works with zero API key
 """
 from __future__ import annotations
 
-from config.settings import OPENAI_API_KEY, LLM_MODEL
+from config.settings import GROQ_API_KEY, LLM_MODEL
 from embedding.encoder import embed_query
 from search.vector_store import get_store
 
@@ -35,11 +35,14 @@ def _extractive_answer(chunks: list[dict], query: str) -> str:
     return "\n\n---\n\n".join(lines)
 
 
-# ── OpenAI answer ─────────────────────────────────────────────────────────────
+# ── Groq answer (OpenAI-compatible) ──────────────────────────────────────────────
 
-def _openai_answer(context: str, query: str) -> str:
+def _groq_answer(context: str, query: str) -> str:
     from openai import OpenAI
-    client = OpenAI(api_key=OPENAI_API_KEY)
+    client = OpenAI(
+        api_key=GROQ_API_KEY,
+        base_url="https://api.groq.com/openai/v1"
+    )
 
     system = (
         "You are a helpful assistant that answers questions strictly based on "
@@ -102,9 +105,9 @@ def ask(
     context = "\n\n".join(context_parts)
 
     # 4. Generate answer
-    if OPENAI_API_KEY:
+    if GROQ_API_KEY:
         try:
-            answer = _openai_answer(context, query)
+            answer = _groq_answer(context, query)
         except Exception as e:
             answer = _extractive_answer(results, query)
             answer += f"\n\n*(LLM error: {e})*"

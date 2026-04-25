@@ -1,11 +1,13 @@
 """
 search/vector_store.py
 ──────────────────────
-FAISS-backed vector store with JSON metadata sidecar.
-Supports: add, search, delete by doc_id, persist/load.
+FAISS-backed vector store with persistence.
 
-Index type: IndexFlatIP (Inner Product on normalized vecs = cosine sim)
-Optionally upgrades to IVF for large corpora (>10k chunks).
+Stores chunk text + metadata in a JSON sidecar file.
+Raw embeddings are stored alongside metadata so the index can be
+rebuilt after selective deletion (FAISS IndexFlatIP has no remove-by-id).
+
+Singleton: call get_store() everywhere — one instance per process.
 """
 from __future__ import annotations
 
@@ -17,159 +19,238 @@ from typing import Optional
 import faiss
 import numpy as np
 
-from config.settings import EMBEDDING_DIM, FAISS_INDEX_PATH, CHUNKS_DB_PATH
+from config.settings import CHUNKS_DB_PATH, EMBEDDING_DIM, FAISS_INDEX_PATH
 from processing.chunker import Chunk
+
+# ── Singleton ─────────────────────────────────────────────────────────────────
+
+_store: Optional["VectorStore"] = None
+
+
+def get_store() -> "VectorStore":
+    global _store
+    if _store is None:
+        _store = VectorStore()
+    return _store
+
+
+# ── VectorStore ───────────────────────────────────────────────────────────────
 
 
 class VectorStore:
-    """Thread-safe FAISS store with chunk metadata sidecar."""
+    """
+    Thread-safe FAISS vector store.
+
+    Internal data structures:
+      self.index   — faiss.IndexFlatIP  (exact cosine similarity via dot product
+                     on L2-normalised vectors)
+      self.chunks  — list[dict]  parallel to index rows, each dict holds:
+                       chunk_id, doc_id, file_name, chunk_index, text, vector
+    """
 
     def __init__(self):
         self._lock = threading.Lock()
-        self.index: faiss.Index = faiss.IndexFlatIP(EMBEDDING_DIM)
-        self.chunks: list[dict] = []   # parallel list to FAISS internal IDs
-        self._load_if_exists()
+        self.index: faiss.IndexFlatIP = faiss.IndexFlatIP(EMBEDDING_DIM)
+        self.chunks: list[dict] = []
+        self._load()
 
-    # ── Persistence ──────────────────────────────────────────────────────────
+    # ── Persistence ───────────────────────────────────────────────────────────
 
-    def _load_if_exists(self):
-        idx_path = Path(str(FAISS_INDEX_PATH) + ".index")
-        meta_path = Path(CHUNKS_DB_PATH)
-        if idx_path.exists() and meta_path.exists():
-            self.index = faiss.read_index(str(idx_path))
-            self.chunks = json.loads(meta_path.read_text())
-            print(f"[VectorStore] Loaded {len(self.chunks)} chunks from disk.")
+    def _load(self):
+        """Load FAISS index + chunk metadata from disk (silent on first run)."""
+        faiss_path = Path(str(FAISS_INDEX_PATH))
+        chunks_path = Path(str(CHUNKS_DB_PATH))
+
+        try:
+            if faiss_path.exists():
+                self.index = faiss.read_index(str(faiss_path))
+        except Exception as exc:
+            print(f"[VectorStore] Could not load FAISS index: {exc}. Starting fresh.")
+            self.index = faiss.IndexFlatIP(EMBEDDING_DIM)
+
+        try:
+            if chunks_path.exists():
+                self.chunks = json.loads(chunks_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            print(f"[VectorStore] Could not load chunks DB: {exc}. Starting fresh.")
+            self.chunks = []
+
+        # Fit TF-IDF vectorizer on loaded corpus for consistent vocabulary
+        if self.chunks:
+            from embedding.encoder import fit_on_corpus
+            corpus_texts = [c["text"] for c in self.chunks]
+            fit_on_corpus(corpus_texts)
+
+        # Sanity-check: index row count must match metadata list length
+        if self.index.ntotal != len(self.chunks):
+            print(
+                f"[VectorStore] WARNING: index has {self.index.ntotal} vectors but "
+                f"metadata has {len(self.chunks)} entries. Rebuilding from metadata."
+            )
+            self._rebuild_index_from_chunks()
 
     def save(self):
-        idx_path = Path(str(FAISS_INDEX_PATH) + ".index")
-        meta_path = Path(CHUNKS_DB_PATH)
-        with self._lock:
-            faiss.write_index(self.index, str(idx_path))
-            meta_path.write_text(json.dumps(self.chunks, ensure_ascii=False, indent=2))
-        print(f"[VectorStore] Saved {len(self.chunks)} chunks.")
+        """Persist index and metadata to disk."""
+        faiss_path = Path(str(FAISS_INDEX_PATH))
+        chunks_path = Path(str(CHUNKS_DB_PATH))
 
-    # ── Ingestion ─────────────────────────────────────────────────────────────
+        faiss_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with self._lock:
+            faiss.write_index(self.index, str(faiss_path))
+            # Exclude the raw vector from the JSON to keep file size sane when
+            # EMBEDDING_DIM=1536; we only need it in memory for rebuild after delete.
+            serialisable = [
+                {k: v for k, v in c.items() if k != "vector"} for c in self.chunks
+            ]
+            chunks_path.write_text(
+                json.dumps(serialisable, ensure_ascii=False), encoding="utf-8"
+            )
+
+    # ── Write ─────────────────────────────────────────────────────────────────
 
     def add_chunks(self, chunks: list[Chunk], embeddings: np.ndarray):
-        """Add chunk metadata + their embeddings to the store."""
-        if len(chunks) == 0:
-            return
+        """
+        Add a batch of chunks and their embeddings to the store.
+
+        Args:
+            chunks:     list of Chunk dataclass instances
+            embeddings: float32 numpy array of shape (N, EMBEDDING_DIM),
+                        L2-normalised (encoder guarantees this)
+        """
+        if len(chunks) != embeddings.shape[0]:
+            raise ValueError(
+                f"chunks length ({len(chunks)}) != embeddings rows ({embeddings.shape[0]})"
+            )
+
         with self._lock:
             self.index.add(embeddings)
-            for chunk in chunks:
-                self.chunks.append({
-                    "chunk_id": chunk.chunk_id,
-                    "doc_id": chunk.doc_id,
-                    "file_name": chunk.file_name,
-                    "source": chunk.source,
-                    "chunk_index": chunk.chunk_index,
-                    "text": chunk.text,
-                    "metadata": chunk.metadata,
-                })
+            for chunk, vec in zip(chunks, embeddings):
+                self.chunks.append(
+                    {
+                        "chunk_id": chunk.chunk_id,
+                        "doc_id": chunk.doc_id,
+                        "file_name": chunk.file_name,
+                        "chunk_index": chunk.chunk_index,
+                        "text": chunk.text,
+                        # Store raw vector in memory so we can rebuild after deletion
+                        "vector": vec.tolist(),
+                    }
+                )
 
-    def delete_by_doc_id(self, doc_id: str):
-        """
-        Remove all chunks for a doc. FAISS FlatIP doesn't support removal,
-        so we rebuild the index from remaining vectors.
-        """
-        with self._lock:
-            keep_indices = [
-                i for i, c in enumerate(self.chunks) if c["doc_id"] != doc_id
-            ]
-            if len(keep_indices) == len(self.chunks):
-                return  # nothing to remove
-
-            remaining_chunks = [self.chunks[i] for i in keep_indices]
-
-            # Reconstruct embeddings for remaining
-            all_vecs = faiss.rev_swig_ptr(
-                self.index.get_xb(), self.index.ntotal * EMBEDDING_DIM
-            ).reshape(self.index.ntotal, EMBEDDING_DIM).copy()
-            kept_vecs = all_vecs[keep_indices]
-
-            new_index = faiss.IndexFlatIP(EMBEDDING_DIM)
-            if len(kept_vecs) > 0:
-                new_index.add(kept_vecs.astype("float32"))
-
-            self.index = new_index
-            self.chunks = remaining_chunks
-
-    # ── Search ────────────────────────────────────────────────────────────────
+    # ── Read ──────────────────────────────────────────────────────────────────
 
     def search(
         self,
         query_embedding: np.ndarray,
         top_k: int = 5,
-        doc_ids: Optional[list[str]] = None,
+        doc_ids: list[str] | None = None,
         score_threshold: float = 0.0,
     ) -> list[dict]:
         """
-        Return top_k most similar chunks.
-        Optionally filter to specific doc_ids (metadata filtering).
+        Retrieve the top-k most similar chunks.
+
+        Args:
+            query_embedding:  float32 array of shape (1, EMBEDDING_DIM)
+            top_k:            number of results to return (after filtering)
+            doc_ids:          optional whitelist of doc_id strings to restrict search
+            score_threshold:  minimum cosine similarity score to include a result
+
+        Returns:
+            list of dicts: {chunk_id, doc_id, file_name, chunk_index, text, score}
+        """
+        if self.index.ntotal == 0:
+            return []
+
+        # Over-fetch so we still get top_k results after metadata filtering
+        fetch_k = min(top_k * 10, self.index.ntotal)
+        scores, indices = self.index.search(query_embedding.astype("float32"), fetch_k)
+
+        results: list[dict] = []
+        for score, idx in zip(scores[0], indices[0]):
+            if idx < 0:
+                continue
+            if float(score) < score_threshold:
+                continue
+            chunk = self.chunks[idx]
+            if doc_ids is not None and chunk["doc_id"] not in doc_ids:
+                continue
+            results.append(
+                {
+                    "chunk_id": chunk["chunk_id"],
+                    "doc_id": chunk["doc_id"],
+                    "file_name": chunk["file_name"],
+                    "chunk_index": chunk["chunk_index"],
+                    "text": chunk["text"],
+                    "score": float(score),
+                }
+            )
+            if len(results) >= top_k:
+                break
+
+        return results
+
+    # ── Delete ────────────────────────────────────────────────────────────────
+
+    def delete_by_doc_id(self, doc_id: str):
+        """
+        Remove all chunks belonging to doc_id and rebuild the FAISS index.
+
+        FAISS IndexFlatIP has no native delete; we rebuild from the stored
+        in-memory vectors of the remaining chunks.
         """
         with self._lock:
-            if self.index.ntotal == 0:
-                return []
+            remaining = [c for c in self.chunks if c["doc_id"] != doc_id]
+            if len(remaining) == len(self.chunks):
+                return  # nothing to delete
 
-            # Fetch more candidates if we need to filter
-            fetch_k = top_k * 5 if doc_ids else top_k
-            fetch_k = min(fetch_k, self.index.ntotal)
+            new_index = faiss.IndexFlatIP(EMBEDDING_DIM)
+            if remaining:
+                vectors = np.array(
+                    [c["vector"] for c in remaining], dtype="float32"
+                )
+                new_index.add(vectors)
 
-            scores, indices = self.index.search(
-                query_embedding.reshape(1, -1).astype("float32"),
-                fetch_k,
-            )
-            scores = scores[0]
-            indices = indices[0]
+            self.index = new_index
+            self.chunks = remaining
 
-            results = []
-            for score, idx in zip(scores, indices):
-                if idx < 0 or idx >= len(self.chunks):
-                    continue
-                chunk = self.chunks[idx]
-                if score < score_threshold:
-                    continue
-                if doc_ids and chunk["doc_id"] not in doc_ids:
-                    continue
-                results.append({**chunk, "score": float(score)})
-                if len(results) >= top_k:
-                    break
-
-            return results
-
-    # ── Stats ─────────────────────────────────────────────────────────────────
-
-    def stats(self) -> dict:
-        with self._lock:
-            doc_ids = {c["doc_id"] for c in self.chunks}
-            return {
-                "total_chunks": len(self.chunks),
-                "total_documents": len(doc_ids),
-                "index_size": self.index.ntotal,
-            }
+    # ── Metadata helpers ──────────────────────────────────────────────────────
 
     def list_documents(self) -> list[dict]:
-        """Return one summary entry per unique doc_id."""
-        with self._lock:
-            seen = {}
-            for c in self.chunks:
-                did = c["doc_id"]
-                if did not in seen:
-                    seen[did] = {
-                        "doc_id": did,
-                        "file_name": c["file_name"],
-                        "chunk_count": 0,
-                    }
-                seen[did]["chunk_count"] += 1
-            return list(seen.values())
+        """Return one entry per unique doc_id: {doc_id, file_name, chunk_count}."""
+        seen: dict[str, dict] = {}
+        for c in self.chunks:
+            doc_id = c["doc_id"]
+            if doc_id not in seen:
+                seen[doc_id] = {
+                    "doc_id": doc_id,
+                    "file_name": c["file_name"],
+                    "chunk_count": 0,
+                }
+            seen[doc_id]["chunk_count"] += 1
+        return list(seen.values())
 
+    def stats(self) -> dict:
+        return {
+            "total_chunks": self.index.ntotal,
+            "total_documents": len(self.list_documents()),
+            "index_size": self.index.ntotal,
+        }
 
-# ── Singleton ────────────────────────────────────────────────────────────────
-_store: VectorStore | None = None
+    # ── Internal helpers ──────────────────────────────────────────────────────
 
+    def _rebuild_index_from_chunks(self):
+        """Rebuild FAISS index from vectors stored in self.chunks (recovery path)."""
+        chunks_with_vectors = [c for c in self.chunks if "vector" in c]
+        if not chunks_with_vectors:
+            self.index = faiss.IndexFlatIP(EMBEDDING_DIM)
+            self.chunks = []
+            return
 
-def get_store() -> VectorStore:
-    global _store
-    if _store is None:
-        _store = VectorStore()
-    return _store
+        vectors = np.array(
+            [c["vector"] for c in chunks_with_vectors], dtype="float32"
+        )
+        new_index = faiss.IndexFlatIP(EMBEDDING_DIM)
+        new_index.add(vectors)
+        self.index = new_index
+        self.chunks = chunks_with_vectors

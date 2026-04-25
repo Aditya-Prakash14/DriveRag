@@ -4,7 +4,7 @@ api/main.py
 FastAPI application exposing:
 
   GET  /                       → health check
-  GET  /auth/login             → redirect to Google OAuth
+  GET  /auth/login             → redirect to Google OAuth (PKCE)
   GET  /auth/callback          → OAuth callback, sets session cookie
   GET  /auth/me                → current user info
   POST /auth/logout            → clear session
@@ -14,6 +14,12 @@ FastAPI application exposing:
   GET  /documents              → list indexed documents
   DELETE /documents/{doc_id}  → remove a document from the index
   GET  /stats                  → index statistics
+
+Fixes applied:
+  - hmac.new() called with keyword args (removes # type: ignore)
+  - auth_callback: response object is created AFTER the try block succeeds,
+    so cookie is never lost on the error path
+  - PKCE state + code_verifier stored in httponly cookies and validated
 """
 import asyncio
 import base64
@@ -31,8 +37,13 @@ from pydantic import BaseModel
 
 from config.settings import ALLOWED_ORIGINS, FRONTEND_URL, SESSION_SECRET
 from connectors.google_drive import (
-    download_file, exchange_code, get_auth_url,
-    get_user_info, list_drive_files, load_credentials, save_credentials
+    download_file,
+    exchange_code,
+    get_auth_url,
+    get_user_info,
+    list_drive_files,
+    load_credentials,
+    save_credentials,
 )
 from embedding.encoder import embed_texts
 from processing.chunker import chunk_document
@@ -41,11 +52,15 @@ from search.rag import ask
 from search.vector_store import get_store
 
 
-# ── Session helpers (simple signed cookie, no DB needed) ────────────────────
+# ── Session helpers (HMAC-signed cookie, no DB needed) ───────────────────────
 
 
 def _sign(data: str) -> str:
-    sig = hmac.new(SESSION_SECRET.encode(), data.encode(), hashlib.sha256).digest()  # type: ignore
+    sig = hmac.new(
+        key=SESSION_SECRET.encode(),
+        msg=data.encode(),
+        digestmod=hashlib.sha256,
+    ).digest()
     return base64.urlsafe_b64encode(sig).decode()
 
 
@@ -55,8 +70,11 @@ def set_session(response: Response, user_id: str, user_info: dict):
     sig = _sign(encoded)
     cookie_val = f"{encoded}.{sig}"
     response.set_cookie(
-        "session", cookie_val,
-        httponly=True, samesite="lax", max_age=86400 * 7,
+        "session",
+        cookie_val,
+        httponly=True,
+        samesite="lax",
+        max_age=86400 * 7,
     )
 
 
@@ -80,13 +98,12 @@ def require_session(request: Request) -> dict:
     return session
 
 
-# ── Lifespan: load FAISS index on startup, skip model preload (lazy load) ─────
+# ── Lifespan ──────────────────────────────────────────────────────────────────
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Skip model preload to avoid segfault on startup with sentence-transformers
-    # Model will load lazily on first embedding request
-    get_store()       # load FAISS index from disk
+    get_store()   # load FAISS index from disk on startup
     yield
     get_store().save()  # persist on shutdown
 
@@ -106,6 +123,7 @@ app.add_middleware(
 
 # ── Health ────────────────────────────────────────────────────────────────────
 
+
 @app.get("/")
 async def health():
     return {"status": "ok", "service": "DriveRAG", "version": "1.0.0"}
@@ -113,34 +131,42 @@ async def health():
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
+
 @app.get("/auth/login")
 async def auth_login(request: Request):
     """Redirect browser to Google OAuth consent screen."""
     state = secrets.token_urlsafe(16)
     auth_url, code_verifier = get_auth_url(state=state)
+
     response = RedirectResponse(auth_url)
     response.set_cookie("oauth_state", state, httponly=True, max_age=600)
-    response.set_cookie("oauth_code_verifier", code_verifier, httponly=True, max_age=600)
+    response.set_cookie(
+        "oauth_code_verifier", code_verifier, httponly=True, max_age=600
+    )
     return response
 
 
 @app.get("/auth/callback")
 async def auth_callback(request: Request, code: str, state: str):
-    """Handle OAuth callback, exchange code for tokens, set session."""
-    # Validate state and get code_verifier from cookies
+    """
+    Handle OAuth callback, exchange code for tokens, set session cookie.
+
+    The response object is only created AFTER the entire try block succeeds,
+    so the session cookie is never attached to a JSONResponse error object.
+    """
     cookie_state = request.cookies.get("oauth_state")
     code_verifier = request.cookies.get("oauth_code_verifier")
-    
-    if not cookie_state or cookie_state != state:
-        return JSONResponse({"error": "Invalid state"}, status_code=400)
-    if not code_verifier:
-        return JSONResponse({"error": "Missing code_verifier"}, status_code=400)
-    
-    response = RedirectResponse(url=FRONTEND_URL)
 
+    if not cookie_state or cookie_state != state:
+        raise HTTPException(status_code=400, detail="Invalid OAuth state")
+    if not code_verifier:
+        raise HTTPException(status_code=400, detail="Missing PKCE code_verifier")
+
+    # Perform the entire token exchange BEFORE creating the response
     try:
-        token_data = exchange_code(code, code_verifier)
         from google.oauth2.credentials import Credentials
+
+        token_data = exchange_code(code, code_verifier)
         creds = Credentials(
             token=token_data["token"],
             refresh_token=token_data.get("refresh_token"),
@@ -151,12 +177,15 @@ async def auth_callback(request: Request, code: str, state: str):
         user_info = get_user_info(creds)
         user_id = user_info["id"]
         save_credentials(user_id, token_data)
-        set_session(response, user_id, user_info)
-    except Exception as e:
+    except Exception as exc:
         import traceback
-        traceback.print_exc()
-        return JSONResponse({"error": str(e), "detail": traceback.format_exc()}, status_code=400)
 
+        traceback.print_exc()
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    # Only now create the redirect response and attach the session cookie
+    response = RedirectResponse(url=FRONTEND_URL)
+    set_session(response, user_id, user_info)
     return response
 
 
@@ -180,6 +209,7 @@ async def auth_logout(request: Request):
 
 # ── Drive ─────────────────────────────────────────────────────────────────────
 
+
 @app.get("/drive/files")
 async def drive_files(request: Request):
     """List supported files from user's Google Drive."""
@@ -187,25 +217,29 @@ async def drive_files(request: Request):
     user_id = session["user_id"]
     creds = load_credentials(user_id)
     if not creds:
-        raise HTTPException(status_code=401, detail="No Drive credentials. Please re-authenticate.")
+        raise HTTPException(
+            status_code=401,
+            detail="No Drive credentials. Please re-authenticate.",
+        )
     try:
         files = list_drive_files(creds)
         return {"files": files}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 # ── Sync ──────────────────────────────────────────────────────────────────────
 
+
 class SyncRequest(BaseModel):
-    file_ids: list[str]         # Drive file IDs to ingest
-    incremental: bool = True    # skip already-indexed docs
+    file_ids: list[str]
+    incremental: bool = True
 
 
 class SyncProgress(BaseModel):
     file_id: str
     file_name: str
-    status: str    # processing | done | error
+    status: str   # processing | done | skipped | error
     chunks: int = 0
     error: str = ""
 
@@ -225,78 +259,85 @@ async def sync_drive(body: SyncRequest, request: Request):
     store = get_store()
     existing_docs = {d["doc_id"] for d in store.list_documents()}
 
-    # Get file metadata for requested IDs
     all_files = list_drive_files(creds)
     file_map = {f["id"]: f for f in all_files}
 
-    results = []
+    results: list[SyncProgress] = []
     total_new_chunks = 0
 
     for file_id in body.file_ids:
         file_meta = file_map.get(file_id)
         if not file_meta:
-            results.append(SyncProgress(
-                file_id=file_id, file_name="unknown",
-                status="error", error="File not found in Drive",
-            ))
+            results.append(
+                SyncProgress(
+                    file_id=file_id,
+                    file_name="unknown",
+                    status="error",
+                    error="File not found in Drive",
+                )
+            )
             continue
 
         file_name = file_meta["name"]
-        doc_id = hashlib.md5(file_id.encode()).hexdigest()
+        import hashlib as _hl
 
-        # Incremental sync: skip if already indexed
+        doc_id = _hl.md5(file_id.encode()).hexdigest()
+
         if body.incremental and doc_id in existing_docs:
-            results.append(SyncProgress(
-                file_id=file_id, file_name=file_name,
-                status="skipped",
-            ))
+            results.append(
+                SyncProgress(file_id=file_id, file_name=file_name, status="skipped")
+            )
             continue
 
         try:
-            # Download
             content = await asyncio.to_thread(
                 download_file, creds, file_id, file_meta["mimeType"]
             )
 
-            # Extract + clean text
             file_type = file_meta["type"]
             raw_text = extract_text(content, file_type)
             clean = clean_text(raw_text)
 
             if not clean:
-                results.append(SyncProgress(
-                    file_id=file_id, file_name=file_name,
-                    status="error", error="No extractable text found",
-                ))
+                results.append(
+                    SyncProgress(
+                        file_id=file_id,
+                        file_name=file_name,
+                        status="error",
+                        error="No extractable text found",
+                    )
+                )
                 continue
 
-            # Chunk
             chunks = chunk_document(clean, doc_id=doc_id, file_name=file_name)
-
-            # Embed (batch)
             texts = [c.text for c in chunks]
             embeddings = await asyncio.to_thread(embed_texts, texts)
 
-            # If re-syncing, remove old version first
             if doc_id in existing_docs:
                 store.delete_by_doc_id(doc_id)
 
-            # Store
             store.add_chunks(chunks, embeddings)
             total_new_chunks += len(chunks)
 
-            results.append(SyncProgress(
-                file_id=file_id, file_name=file_name,
-                status="done", chunks=len(chunks),
-            ))
+            results.append(
+                SyncProgress(
+                    file_id=file_id,
+                    file_name=file_name,
+                    status="done",
+                    chunks=len(chunks),
+                )
+            )
 
-        except Exception as e:
-            results.append(SyncProgress(
-                file_id=file_id, file_name=file_name,
-                status="error", error=str(e),
-            ))
+        except Exception as exc:
+            results.append(
+                SyncProgress(
+                    file_id=file_id,
+                    file_name=file_name,
+                    status="error",
+                    error=str(exc),
+                )
+            )
 
-    # Persist updated index
     await asyncio.to_thread(store.save)
 
     return {
@@ -308,20 +349,18 @@ async def sync_drive(body: SyncRequest, request: Request):
 
 # ── Query ─────────────────────────────────────────────────────────────────────
 
+
 class AskRequest(BaseModel):
     query: str
     top_k: int = 5
-    doc_ids: Optional[list[str]] = None   # metadata filter
+    doc_ids: Optional[list[str]] = None
     score_threshold: float = 0.15
 
 
 @app.post("/ask")
 async def ask_question(body: AskRequest, request: Request):
-    """
-    RAG query endpoint.
-    Returns: { answer, sources, chunks_used }
-    """
-    require_session(request)    # must be authenticated
+    """RAG query endpoint. Returns {answer, sources, chunks_used}."""
+    require_session(request)
 
     if not body.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty.")
@@ -336,7 +375,8 @@ async def ask_question(body: AskRequest, request: Request):
     return result
 
 
-# ── Documents ────────────────────────────────────────────────────────────────
+# ── Documents ─────────────────────────────────────────────────────────────────
+
 
 @app.get("/documents")
 async def list_documents(request: Request):
