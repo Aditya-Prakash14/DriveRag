@@ -242,6 +242,7 @@ class SyncProgress(BaseModel):
     status: str   # processing | done | skipped | error
     chunks: int = 0
     error: str = ""
+    doc_id: str = ""
 
 
 @app.post("/sync-drive")
@@ -285,7 +286,7 @@ async def sync_drive(body: SyncRequest, request: Request):
 
         if body.incremental and doc_id in existing_docs:
             results.append(
-                SyncProgress(file_id=file_id, file_name=file_name, status="skipped")
+                SyncProgress(file_id=file_id, file_name=file_name, status="skipped", doc_id=doc_id)
             )
             continue
 
@@ -325,6 +326,7 @@ async def sync_drive(body: SyncRequest, request: Request):
                     file_name=file_name,
                     status="done",
                     chunks=len(chunks),
+                    doc_id=doc_id,
                 )
             )
 

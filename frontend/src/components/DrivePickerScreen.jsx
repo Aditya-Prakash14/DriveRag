@@ -2,6 +2,42 @@ import { useState, useEffect } from "react";
 import { Icon } from "../icons/Icon";
 import { listDriveFiles } from "../utils/api";
 
+/* ── Distinct file type icons matching Google Drive colors ── */
+function FileTypeIcon({ type, size = 24 }) {
+  const icons = {
+    pdf: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M6 2h8.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V20a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z" fill="#ea433515" stroke="#ea4335" strokeWidth="1.5"/>
+        <path d="M14 2v5a1 1 0 001 1h5" stroke="#ea4335" strokeWidth="1.5" strokeLinecap="round"/>
+        <text x="12" y="17" textAnchor="middle" fill="#ea4335" fontSize="6" fontWeight="800" fontFamily="Inter, sans-serif">PDF</text>
+      </svg>
+    ),
+    gdoc: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M6 2h8.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V20a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z" fill="#4285f415" stroke="#4285f4" strokeWidth="1.5"/>
+        <path d="M14 2v5a1 1 0 001 1h5" stroke="#4285f4" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M8 13h8M8 16h5" stroke="#4285f4" strokeWidth="1.5" strokeLinecap="round"/>
+      </svg>
+    ),
+    docx: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M6 2h8.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V20a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z" fill="#185abd15" stroke="#185abd" strokeWidth="1.5"/>
+        <path d="M14 2v5a1 1 0 001 1h5" stroke="#185abd" strokeWidth="1.5" strokeLinecap="round"/>
+        <text x="12" y="17" textAnchor="middle" fill="#185abd" fontSize="5.5" fontWeight="800" fontFamily="Inter, sans-serif">W</text>
+      </svg>
+    ),
+    txt: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M6 2h8.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V20a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z" fill="#5f636815" stroke="#5f6368" strokeWidth="1.5"/>
+        <path d="M14 2v5a1 1 0 001 1h5" stroke="#5f6368" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M8 13h8M8 16h6M8 10h4" stroke="#5f6368" strokeWidth="1.2" strokeLinecap="round"/>
+      </svg>
+    ),
+  };
+
+  return icons[type] || icons.txt;
+}
+
 export function DrivePickerScreen({ user, onSync, onSignOut }) {
   const [selected, setSelected] = useState(new Set());
   const [search, setSearch] = useState("");
@@ -29,25 +65,33 @@ export function DrivePickerScreen({ user, onSync, onSignOut }) {
   const toggle = (id) => {
     setSelected(prev => {
       const s = new Set(prev);
-      s.has(id) ? s.delete(id) : s.add(id);
+      if (s.has(id)) {
+        s.delete(id);
+      } else {
+        if (s.size >= 10) {
+          alert("You can only select up to 10 files at a time.");
+          return s;
+        }
+        s.add(id);
+      }
       return s;
     });
   };
 
   const selectAll = () => {
-    if (selected.size === filtered.length) setSelected(new Set());
-    else setSelected(new Set(filtered.map(d => d.id)));
+    if (selected.size === Math.min(filtered.length, 10)) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(filtered.slice(0, 10).map(d => d.id)));
+    }
   };
 
-  const badgeClass = (type) => ({
-    pdf: "badge-pdf", gdoc: "badge-doc", docx: "badge-doc", txt: "badge-txt"
-  }[type] || "badge-txt");
-
-  const fileIcon = (type) => ({
-    pdf: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
-    gdoc: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
-    docx: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
-  }[type] || "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z");
+  const typeBadge = (type) => ({
+    pdf: { label: "PDF", cls: "badge-pdf" },
+    gdoc: { label: "DOC", cls: "badge-doc" },
+    docx: { label: "DOCX", cls: "badge-doc" },
+    txt: { label: "TXT", cls: "badge-txt" },
+  }[type] || { label: type?.toUpperCase() || "FILE", cls: "badge-txt" });
 
   const selectedDocs = files.filter(d => selected.has(d.id));
 
@@ -125,15 +169,15 @@ export function DrivePickerScreen({ user, onSync, onSignOut }) {
             <>
               {/* Toolbar */}
               <div className="drive-content-toolbar">
-                <button className="drive-checkbox-all" onClick={selectAll}>
-                  <div className={`drive-checkbox ${selected.size === filtered.length && filtered.length > 0 ? "checked" : ""}`}>
-                    {selected.size === filtered.length && filtered.length > 0 && (
+                <button className="drive-checkbox-all" onClick={selectAll} title="Select up to 10 files">
+                  <div className={`drive-checkbox ${selected.size > 0 && selected.size === Math.min(filtered.length, 10) ? "checked" : ""}`}>
+                    {selected.size > 0 && selected.size === Math.min(filtered.length, 10) && (
                       <Icon d="M5 13l4 4L19 7" size={12} color="white" />
                     )}
                   </div>
                 </button>
                 <span className="drive-toolbar-label">
-                  {selected.size > 0 ? `${selected.size} selected` : "Name"}
+                  {selected.size > 0 ? `${selected.size} selected (Max 10)` : "Name"}
                 </span>
                 {selected.size > 0 && (
                   <button
@@ -168,9 +212,12 @@ export function DrivePickerScreen({ user, onSync, onSignOut }) {
                         </div>
                       </div>
                       <div className="drive-file-icon">
-                        <Icon d={fileIcon(doc.type)} size={20} color={doc.type === "pdf" ? "#ea4335" : doc.type === "gdoc" || doc.type === "docx" ? "#4285f4" : "var(--text3)"} />
+                        <FileTypeIcon type={doc.type} />
                       </div>
-                      <div className="drive-file-name">{doc.name}</div>
+                      <div className="drive-file-name">
+                        {doc.name}
+                        <span className={`file-type-badge ${typeBadge(doc.type).cls}`}>{typeBadge(doc.type).label}</span>
+                      </div>
                       <div className="drive-file-meta">{doc.size}</div>
                       <div className="drive-file-meta">{doc.modified}</div>
                     </div>

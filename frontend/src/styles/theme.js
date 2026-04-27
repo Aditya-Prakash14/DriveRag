@@ -330,12 +330,44 @@ export const styles = `
   .drive-file-name {
     flex: 1; font-size: 15px; font-weight: 600; color: var(--text);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    display: flex; align-items: center; gap: 8px;
   }
 
   .drive-file-meta {
     font-size: 14px; font-weight: 500; color: var(--text3);
     width: 120px; text-align: right; flex-shrink: 0;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* ── File Type Badges ── */
+  .file-type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+    line-height: 1.6;
+  }
+
+  .badge-pdf {
+    background: #fce8e6;
+    color: #c5221f;
+    border: 1px solid #f5c6c2;
+  }
+
+  .badge-doc {
+    background: #e8f0fe;
+    color: #1967d2;
+    border: 1px solid #c6dafc;
+  }
+
+  .badge-txt {
+    background: #f1f3f4;
+    color: #5f6368;
+    border: 1px solid #dadce0;
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════
@@ -619,4 +651,354 @@ export const styles = `
   .empty-state-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.4; }
   .empty-state h3 { font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--text); }
   .empty-state p { font-size: 15px; font-weight: 500; color: var(--text2); max-width: 320px; line-height: 1.6; }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     TYPEWRITER EFFECT
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  .typewriter-wrap {
+    display: inline;
+  }
+
+  .tw-cursor {
+    display: inline-block;
+    width: 2.5px;
+    height: 1.15em;
+    background: var(--accent);
+    margin-left: 3px;
+    vertical-align: text-bottom;
+    border-radius: 1px;
+    animation: cursorBlink 0.75s steps(2) infinite;
+  }
+
+  @keyframes cursorBlink {
+    0%   { opacity: 1; }
+    50%  { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     MESSAGE ACTIONS (copy, regenerate) — revealed on hover
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  .msg-actions {
+    display: flex;
+    gap: 4px;
+    margin-top: 12px;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.2s, transform 0.2s;
+  }
+
+  .chatgpt-msg:hover .msg-actions {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .msg-copy {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text3);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--font-body);
+    position: relative;
+  }
+
+  .msg-copy:hover {
+    color: var(--text);
+    border-color: var(--border2);
+    background: var(--surface2);
+  }
+
+  .msg-copy:active {
+    transform: scale(0.96);
+  }
+
+  .msg-copy.done {
+    color: var(--green);
+    border-color: var(--green);
+    background: rgba(16, 163, 127, 0.06);
+  }
+
+  .copy-toast {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--green);
+    animation: toastIn 0.25s ease-out;
+  }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(-4px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     THINKING BUBBLE — animated dots with phase label
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  .thinking-bubble {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 0;
+    animation: msgIn 0.3s ease-out;
+  }
+
+  .thinking-dots {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .thinking-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--text3);
+    animation: thinkBounce 1.4s ease infinite;
+  }
+
+  .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes thinkBounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
+    30% { transform: translateY(-8px); opacity: 1; background: var(--accent); }
+  }
+
+  .thinking-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text3);
+    animation: labelPulse 2s ease infinite;
+  }
+
+  @keyframes labelPulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     SOURCES ENTER ANIMATION
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  .sources-enter {
+    animation: sourcesSlideIn 0.35s ease-out;
+  }
+
+  @keyframes sourcesSlideIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     ENHANCED INPUT AREA
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  .input-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .char-count {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text3);
+    min-width: 24px;
+    text-align: right;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .chatgpt-input-box.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .chatgpt-send-btn.active {
+    background: var(--accent);
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .chatgpt-send-btn.active:hover {
+    background: var(--accent2);
+    transform: scale(1.1);
+  }
+
+  .chatgpt-send-btn.active:active {
+    transform: scale(0.95);
+  }
+
+  /* ── Input footer with shortcut hints ── */
+  .chatgpt-input-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    padding: 0 4px;
+  }
+
+  .chatgpt-input-footer .chatgpt-input-hint {
+    margin-top: 0;
+    text-align: left;
+  }
+
+  .chatgpt-input-shortcut {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text3);
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
+
+  kbd {
+    display: inline-block;
+    padding: 1px 6px;
+    font-size: 11px;
+    font-family: var(--font-body);
+    font-weight: 600;
+    color: var(--text2);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    line-height: 1.7;
+    box-shadow: 0 1px 0 var(--border);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     ENHANCED HINT BUTTONS — with icon support
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  .chatgpt-hint-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: var(--font-body);
+  }
+
+  .chatgpt-hint-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-glow);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 163, 127, 0.12);
+  }
+
+  .chatgpt-hint-btn:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     ENHANCED MESSAGE & USER INTERACTIONS
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  .chatgpt-msg {
+    padding: 24px 0;
+    animation: msgIn 0.3s ease-out;
+    transition: background 0.15s;
+  }
+
+  .chatgpt-msg:hover {
+    background: rgba(0, 0, 0, 0.015);
+  }
+
+  .chatgpt-msg.user {
+    background: transparent;
+  }
+  .chatgpt-msg.user:hover {
+    background: rgba(0, 0, 0, 0.01);
+  }
+
+  .chatgpt-msg.ai {
+    background: transparent;
+  }
+
+  .chatgpt-msg-avatar {
+    transition: transform 0.2s;
+  }
+  .chatgpt-msg:hover .chatgpt-msg-avatar {
+    transform: scale(1.05);
+  }
+
+  /* User message text gets a subtle pill background */
+  .chatgpt-msg.user .chatgpt-msg-text {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 18px 18px 4px 18px;
+    padding: 12px 18px;
+    display: inline-block;
+    max-width: 100%;
+  }
+
+  /* Smooth scroll indicator pulse on new messages */
+  .chatgpt-messages {
+    scroll-behavior: smooth;
+  }
+
+  /* Source chips enhanced hover */
+  .chatgpt-source-chip {
+    transition: all 0.2s;
+  }
+
+  .chatgpt-source-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(16, 163, 127, 0.1);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     RESPONSIVE — mobile adjustments for new elements
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  @media (max-width: 640px) {
+    .chatgpt-input-footer {
+      flex-direction: column;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .chatgpt-input-shortcut {
+      display: none;
+    }
+
+    .chatgpt-hints {
+      padding: 0 8px;
+    }
+
+    .chatgpt-hint-btn {
+      font-size: 13px;
+      padding: 8px 14px;
+    }
+
+    .msg-actions {
+      opacity: 1;
+      transform: none;
+    }
+
+    .chatgpt-msg.user .chatgpt-msg-text {
+      border-radius: 14px 14px 4px 14px;
+      padding: 10px 14px;
+    }
+  }
 `;

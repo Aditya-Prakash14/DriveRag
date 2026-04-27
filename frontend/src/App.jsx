@@ -12,6 +12,7 @@ export default function App() {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [syncProgress, setSyncProgress] = useState(0);
   const [syncStep, setSyncStep] = useState("");
+  const [syncedDocIds, setSyncedDocIds] = useState(null);
 
   // Check if user is already authenticated on mount
   useEffect(() => {
@@ -46,7 +47,14 @@ export default function App() {
 
     try {
       const fileIds = files.map(f => f.id);
-      await syncDrive(fileIds);
+      const syncResult = await syncDrive(fileIds);
+
+      // Extract doc_ids of successfully synced/skipped files for query filtering
+      const docIds = (syncResult.results || [])
+        .filter(r => r.status === "done" || r.status === "skipped")
+        .map(r => r.doc_id)
+        .filter(Boolean);
+      setSyncedDocIds(docIds.length > 0 ? docIds : null);
 
       setSyncProgress(90);
       setSyncStep("Indexing complete. Building knowledge base…");
@@ -99,6 +107,7 @@ export default function App() {
           <ChatScreen
             user={user}
             files={selectedFiles}
+            docIds={syncedDocIds}
             onBack={() => setScreen("picker")}
           />
         )}

@@ -10,13 +10,35 @@ from typing import Optional
 import PyPDF2
 from docx import Document
 
+try:
+    import fitz  # PyMuPDF
+except ImportError:
+    fitz = None
+
 
 def extract_text_from_pdf(content: bytes) -> str:
-    reader = PyPDF2.PdfReader(io.BytesIO(content))
     pages = []
-    for page in reader.pages:
-        text = page.extract_text() or ""
-        pages.append(text)
+    
+    # Primary: PyMuPDF (much better text extraction)
+    if fitz:
+        try:
+            doc = fitz.open(stream=content, filetype="pdf")
+            for page in doc:
+                pages.append(page.get_text() or "")
+            return "\n\n".join(pages)
+        except Exception as e:
+            print(f"[Parser] PyMuPDF failed: {e}. Falling back to PyPDF2.")
+            pass
+
+    # Fallback: PyPDF2
+    try:
+        reader = PyPDF2.PdfReader(io.BytesIO(content))
+        for page in reader.pages:
+            text = page.extract_text() or ""
+            pages.append(text)
+    except Exception as e:
+        print(f"[Parser] PyPDF2 failed: {e}")
+
     return "\n\n".join(pages)
 
 
