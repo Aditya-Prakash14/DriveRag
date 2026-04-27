@@ -354,7 +354,7 @@ class AskRequest(BaseModel):
     query: str
     top_k: int = 5
     doc_ids: Optional[list[str]] = None
-    score_threshold: float = 0.15
+    score_threshold: float = 0.01
 
 
 @app.post("/ask")

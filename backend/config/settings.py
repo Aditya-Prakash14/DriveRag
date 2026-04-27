@@ -45,11 +45,11 @@ LLM_MODEL = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
 # If you change the model, delete data/faiss_index and data/chunks.json
 # so the index is rebuilt at the correct dimension.
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "hashing")
-EMBEDDING_DIM = 1000  # HashingVectorizer feature count
+EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "1024"))  # HashingVectorizer feature count — balances quality vs speed
 
 # ── Chunking ──────────────────────────────────────────────────────────────────
-CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "500"))
-CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "50"))
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "800"))       # Larger chunks = more context per hit
+CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "200"))  # 25% overlap preserves context across boundaries
 
 # ── Storage paths ─────────────────────────────────────────────────────────────
 DATA_DIR = BASE_DIR / "data"

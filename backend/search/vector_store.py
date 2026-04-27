@@ -68,6 +68,22 @@ class VectorStore:
             print(f"[VectorStore] Could not load FAISS index: {exc}. Starting fresh.")
             self.index = faiss.IndexFlatIP(EMBEDDING_DIM)
 
+        # Dimension mismatch guard: if index dim ≠ EMBEDDING_DIM, wipe and start fresh
+        if self.index.d != EMBEDDING_DIM:
+            print(
+                f"[VectorStore] WARNING: index dimension ({self.index.d}) ≠ "
+                f"EMBEDDING_DIM ({EMBEDDING_DIM}). Wiping stale index — please re-sync."
+            )
+            self.index = faiss.IndexFlatIP(EMBEDDING_DIM)
+            self.chunks = []
+            # Remove stale files from disk
+            try:
+                faiss_path.unlink(missing_ok=True)
+                chunks_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+            return
+
         try:
             if chunks_path.exists():
                 self.chunks = json.loads(chunks_path.read_text(encoding="utf-8"))

@@ -54,7 +54,7 @@ export function syncDrive(fileIds, incremental = true) {
 
 // ── RAG Query ─────────────────────────────────────────────────────────────────
 
-export function askQuestion(query, { topK = 5, docIds = null, scoreThreshold = 0.15 } = {}) {
+export function askQuestion(query, { topK = 5, docIds = null, scoreThreshold = 0.01 } = {}) {
   return request("/ask", {
     method: "POST",
     body: JSON.stringify({
