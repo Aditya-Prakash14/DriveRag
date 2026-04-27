@@ -16,6 +16,10 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).parent.parent
 
+# ── Environment ───────────────────────────────────────────────────────────────
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+IS_PRODUCTION = ENVIRONMENT == "production"
+
 # ── Google OAuth ──────────────────────────────────────────────────────────────
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")

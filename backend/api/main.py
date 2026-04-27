@@ -35,7 +35,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
-from config.settings import ALLOWED_ORIGINS, FRONTEND_URL, SESSION_SECRET
+from config.settings import ALLOWED_ORIGINS, FRONTEND_URL, IS_PRODUCTION, SESSION_SECRET
 from connectors.google_drive import (
     download_file,
     exchange_code,
@@ -73,7 +73,8 @@ def set_session(response: Response, user_id: str, user_info: dict):
         "session",
         cookie_val,
         httponly=True,
-        samesite="lax",
+        samesite="none" if IS_PRODUCTION else "lax",
+        secure=IS_PRODUCTION,
         max_age=86400 * 7,
     )
 
@@ -139,9 +140,15 @@ async def auth_login(request: Request):
     auth_url, code_verifier = get_auth_url(state=state)
 
     response = RedirectResponse(auth_url)
-    response.set_cookie("oauth_state", state, httponly=True, max_age=600)
     response.set_cookie(
-        "oauth_code_verifier", code_verifier, httponly=True, max_age=600
+        "oauth_state", state, httponly=True, max_age=600,
+        samesite="none" if IS_PRODUCTION else "lax",
+        secure=IS_PRODUCTION,
+    )
+    response.set_cookie(
+        "oauth_code_verifier", code_verifier, httponly=True, max_age=600,
+        samesite="none" if IS_PRODUCTION else "lax",
+        secure=IS_PRODUCTION,
     )
     return response
 

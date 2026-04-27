@@ -1,0 +1,44 @@
+# DriveRAG Backend — systemd service file
+# Place at: /etc/systemd/system/driverag.service
+# Enable:   sudo systemctl enable driverag
+# Start:    sudo systemctl start driverag
+# Logs:     sudo journalctl -u driverag -f
+
+[Unit]
+Description=DriveRAG FastAPI Backend
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/DriveRag/backend
+EnvironmentFile=/home/ubuntu/DriveRag/backend/.env
+Environment=ENVIRONMENT=production
+
+# Use the virtualenv Python
+ExecStart=/home/ubuntu/DriveRag/backend/.venv/bin/uvicorn api.main:app \
+    --host 127.0.0.1 \
+    --port 8000 \
+    --workers 2 \
+    --log-level info
+
+# Restart policy
+Restart=always
+RestartSec=5
+StartLimitInterval=60
+StartLimitBurst=5
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=driverag
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/ubuntu/DriveRag/backend/data
+
+[Install]
+WantedBy=multi-user.target

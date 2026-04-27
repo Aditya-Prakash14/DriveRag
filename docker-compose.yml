@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: driverag_backend
+    restart: always
+    env_file:
+      - ./backend/.env
+    environment:
+      - ENVIRONMENT=production
+    volumes:
+      - ./backend/data:/app/data
+    expose:
+      - "8000"
+    networks:
+      - driverag_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: driverag_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+    depends_on:
+      - backend
+    networks:
+      - driverag_network
+
+networks:
+  driverag_network:
+    driver: bridge

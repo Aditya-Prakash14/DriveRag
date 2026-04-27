@@ -1,6 +1,8 @@
 // ─── API client — all requests include credentials for session cookies ────────
+// In dev mode VITE_API_URL is empty → Vite proxy handles routing to localhost:8000
+// In production set VITE_API_URL to the EC2 backend URL (e.g. https://api.driverag.com)
 
-const BASE = "";
+const BASE = import.meta.env.VITE_API_URL || "";
 
 async function request(path, options = {}) {
   const res = await fetch(BASE + path, {
@@ -26,7 +28,7 @@ async function request(path, options = {}) {
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 export function authLoginUrl() {
-  return "/auth/login";
+  return BASE + "/auth/login";
 }
 
 export function getMe() {

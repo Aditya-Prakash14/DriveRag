@@ -4,7 +4,7 @@ import { AuthScreen } from "./components/AuthScreen";
 import { DrivePickerScreen } from "./components/DrivePickerScreen";
 import { ChatScreen } from "./components/ChatScreen";
 import { SyncOverlay } from "./components/SyncOverlay";
-import { getMe, logout, syncDrive } from "./utils/api";
+import { getMe, logout, syncDrive, authLoginUrl } from "./utils/api";
 
 export default function App() {
   const [screen, setScreen] = useState("loading"); // loading | auth | picker | syncing | chat
@@ -30,7 +30,8 @@ export default function App() {
 
   const handleSignIn = () => {
     // Redirect browser to backend OAuth login
-    window.location.href = "/auth/login";
+    // In production, authLoginUrl() returns the full EC2 backend URL
+    window.location.href = authLoginUrl();
   };
 
   const handleSignOut = async () => {
