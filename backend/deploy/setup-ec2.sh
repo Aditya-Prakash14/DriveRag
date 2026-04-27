@@ -9,13 +9,21 @@
 #   3. Point your domain's DNS A record to the EC2 public IP
 #   4. SSH in:  ssh -i your-key.pem ubuntu@<EC2-IP>
 #   5. Clone:   git clone <repo-url> ~/DriveRag
-#   6. Run:     bash ~/DriveRag/backend/deploy/setup-ec2.sh YOUR_DOMAIN
+#   6. Run:     bash ~/DriveRag/backend/deploy/setup-ec2.sh <EC2-IP-OR-DOMAIN>
 #
 # ════════════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 
-DOMAIN="${1:?Usage: $0 <your-domain.com>}"
+INPUT="${1:?Usage: $0 <your-ec2-ip-or-domain>}"
 REPO_DIR="/home/ubuntu/DriveRag"
+
+# Auto-convert IP address to a nip.io domain (e.g. 3.14.15.92 -> 3-14-15-92.nip.io)
+if [[ $INPUT =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    DOMAIN="${INPUT//./-}.nip.io"
+    echo "Detected IP address. Using free domain: $DOMAIN"
+else
+    DOMAIN="$INPUT"
+fi
 
 echo "════════════════════════════════════════════════"
 echo " DriveRAG EC2 Docker Setup — domain: $DOMAIN"
