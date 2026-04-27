@@ -70,7 +70,7 @@ def ask(
     query: str,
     top_k: int = 5,
     doc_ids: list[str] | None = None,
-    score_threshold: float = 0.15,
+    score_threshold: float = 0.05,
 ) -> dict:
     """
     Full RAG pipeline.
@@ -110,7 +110,15 @@ def ask(
             answer = _groq_answer(context, query)
         except Exception as e:
             answer = _extractive_answer(results, query)
-            answer += f"\n\n*(LLM error: {e})*"
+            err_msg = str(e).lower()
+            if "rate_limit" in err_msg or "429" in err_msg:
+                answer += "\n\n⚠️ *Today's LLM token limit has been reached. Showing extractive answer from documents. LLM answers will resume tomorrow.*"
+            elif "decommissioned" in err_msg or ("model" in err_msg and "not" in err_msg and "supported" in err_msg):
+                answer += "\n\n⚠️ *LLM model no longer available. Please update LLM_MODEL in your .env file. Showing extractive answer from documents.*"
+            elif "invalid_api_key" in err_msg or "401" in err_msg:
+                answer += "\n\n⚠️ *Invalid Groq API key. Please check your GROQ_API_KEY in .env. Showing extractive answer from documents.*"
+            else:
+                answer += "\n\n⚠️ *LLM temporarily unavailable. Showing extractive answer from documents.*"
     else:
         answer = _extractive_answer(results, query)
 

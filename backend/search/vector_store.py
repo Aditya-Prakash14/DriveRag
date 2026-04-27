@@ -75,12 +75,6 @@ class VectorStore:
             print(f"[VectorStore] Could not load chunks DB: {exc}. Starting fresh.")
             self.chunks = []
 
-        # Fit TF-IDF vectorizer on loaded corpus for consistent vocabulary
-        if self.chunks:
-            from embedding.encoder import fit_on_corpus
-            corpus_texts = [c["text"] for c in self.chunks]
-            fit_on_corpus(corpus_texts)
-
         # Sanity-check: index row count must match metadata list length
         if self.index.ntotal != len(self.chunks):
             print(

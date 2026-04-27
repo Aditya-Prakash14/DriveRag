@@ -1,5 +1,6 @@
 export const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700;900&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -8,25 +9,27 @@ export const styles = `
   :root {
     --bg: #ffffff;
     --surface: #ffffff;
-    --surface2: #f7f7f8;
-    --surface3: #ececf1;
-    --border: #d9d9e3;
-    --border2: #c5c5d2;
-    --text: #0d0d0d;
-    --text2: #6e6e80;
-    --text3: #9b9b9b;
+    --surface2: #f9f9f9;
+    --surface3: #f0f0f0;
+    --border: #d1d5db;
+    --border2: #9ca3af;
+    --text: #111827;
+    --text2: #374151;
+    --text3: #6b7280;
     --accent: #10a37f;
-    --accent2: #0d8a6a;
-    --accent-glow: rgba(16,163,127,0.1);
+    --accent2: #059669;
+    --accent-glow: rgba(16,163,127,0.15);
     --green: #10a37f;
     --amber: #f59e0b;
     --red: #ef4444;
     --radius: 8px;
-    --font-display: 'Inter', sans-serif;
-    --font-body: 'Inter', sans-serif;
+    --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --gdrive-blue: #1a73e8;
+    --gdrive-bg: #f8f9fa;
   }
 
-  body { background: var(--bg); color: var(--text); font-family: var(--font-body); width: 100%; height: 100%; overflow: hidden; -webkit-font-smoothing: antialiased; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-body); width: 100%; height: 100%; overflow: hidden; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
 
   #root { width: 100%; height: 100%; }
 
@@ -73,21 +76,22 @@ export const styles = `
 
   .auth-headline {
     font-family: var(--font-display);
-    font-size: 24px; font-weight: 600;
-    line-height: 1.3;
+    font-size: 28px; font-weight: 800;
+    line-height: 1.2;
     margin-bottom: 8px;
     color: var(--text);
+    letter-spacing: -0.02em;
   }
 
-  .auth-sub { color: var(--text2); font-size: 14px; line-height: 1.5; margin-bottom: 32px; }
+  .auth-sub { color: var(--text2); font-size: 16px; font-weight: 500; line-height: 1.6; margin-bottom: 32px; }
 
   .btn-google {
     width: 100%;
     display: flex; align-items: center; justify-content: center; gap: 10px;
     background: white; color: var(--text);
     border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 12px 16px;
-    font-family: var(--font-body); font-size: 14px; font-weight: 500;
+    padding: 14px 18px;
+    font-family: var(--font-body); font-size: 15px; font-weight: 600;
     cursor: pointer;
     transition: all 0.15s;
   }
@@ -99,152 +103,255 @@ export const styles = `
   .auth-divider-text { color: var(--text3); font-size: 12px; }
 
   .auth-features { display: flex; flex-direction: column; gap: 12px; }
-  .auth-feature { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text2); }
+  .auth-feature { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; color: var(--text2); }
   .auth-feature-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
 
-  /* ── Drive Picker ── */
+  /* ═══════════════════════════════════════════════════════════════════════════
+     GOOGLE DRIVE STYLE PICKER
+     ═══════════════════════════════════════════════════════════════════════════ */
+
   .picker-screen {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .topbar {
-    height: 52px;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 16px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-  }
-
-  .topbar-brand { display: flex; align-items: center; gap: 8px; }
-  .topbar-logo { width: 24px; height: 24px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 600; font-size: 12px; color: white; }
-  .topbar-name { font-family: var(--font-display); font-weight: 600; font-size: 15px; color: var(--text); }
-
-  .topbar-user { display: flex; align-items: center; gap: 8px; }
-  .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; color: white; }
-  .avatar-name { font-size: 13px; color: var(--text2); }
-
-  .picker-body {
-    flex: 1;
-    max-width: 800px;
-    width: 100%;
-    margin: 0 auto;
-    padding: 32px 24px;
-    overflow-y: auto;
-  }
-  .picker-body::-webkit-scrollbar { width: 6px; }
-  .picker-body::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
-  .picker-body::-webkit-scrollbar-thumb:hover { background: var(--border2); }
-
-  .picker-header { margin-bottom: 24px; }
-  .picker-header h1 { font-family: var(--font-display); font-size: 22px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
-  .picker-header p { color: var(--text2); font-size: 14px; }
-
-  .drive-toolbar {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 16px;
-  }
-
-  .drive-search {
-    display: flex; align-items: center; gap: 8px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 8px 12px;
-    width: 280px;
-  }
-
-  .drive-search input {
-    background: none; border: none; outline: none;
-    color: var(--text); font-family: var(--font-body); font-size: 14px;
-    width: 100%;
-  }
-  .drive-search input::placeholder { color: var(--text3); }
-
-  .drive-actions { display: flex; gap: 8px; }
-
-  .btn-secondary {
-    display: flex; align-items: center; gap: 6px;
-    background: var(--surface2); border: 1px solid var(--border);
-    color: var(--text); border-radius: var(--radius);
-    padding: 8px 12px; font-family: var(--font-body); font-size: 13px;
-    cursor: pointer; transition: all 0.15s;
-  }
-  .btn-secondary:hover { background: var(--surface3); border-color: var(--border2); }
-
-  .btn-primary {
-    display: flex; align-items: center; gap: 6px;
-    background: var(--accent); border: none;
-    color: white; border-radius: var(--radius);
-    padding: 8px 16px; font-family: var(--font-body); font-size: 13px; font-weight: 500;
-    cursor: pointer; transition: all 0.15s;
-  }
-  .btn-primary:hover { background: var(--accent2); }
-  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  .file-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 8px;
-    margin-bottom: 24px;
-  }
-
-  .file-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px;
-    cursor: pointer;
-    transition: all 0.15s;
-    position: relative;
-  }
-  .file-card:hover { border-color: var(--border2); background: var(--surface2); }
-  .file-card.selected { border-color: var(--accent); background: rgba(16,163,127,0.05); }
-
-  .file-card-check {
-    position: absolute; top: 8px; right: 8px;
-    width: 18px; height: 18px; border-radius: 50%;
-    background: var(--accent);
-    display: flex; align-items: center; justify-content: center;
-    opacity: 0; transform: scale(0.6);
-    transition: all 0.2s;
-  }
-  .file-card.selected .file-card-check { opacity: 1; transform: scale(1); }
-
-  .file-type-badge {
-    display: inline-flex; align-items: center;
-    padding: 2px 6px; border-radius: 4px;
-    font-size: 10px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-  .badge-pdf { background: rgba(239,68,68,0.1); color: #ef4444; }
-  .badge-doc { background: rgba(66,133,244,0.1); color: #3b82f6; }
-  .badge-txt { background: rgba(100,100,120,0.1); color: var(--text2); }
-
-  .file-name { font-size: 13px; font-weight: 500; line-height: 1.4; margin-bottom: 4px; color: var(--text); }
-  .file-meta { font-size: 11px; color: var(--text3); }
-
-  .picker-footer {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 16px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-  }
-
-  .selected-count { font-size: 13px; color: var(--text2); }
-  .selected-count strong { color: var(--text); }
-
-  /* ── Chat Screen ── */
-  .chat-screen {
     height: 100vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
 
-  .chat-topbar {
+  /* ── Drive Top Bar ── */
+  .drive-topbar {
+    height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+
+  .drive-topbar-left {
+    display: flex; align-items: center; gap: 12px; flex: 1;
+  }
+
+  .drive-topbar-title {
+    font-size: 24px; font-weight: 700; color: var(--text);
+    font-family: 'Google Sans', 'Inter', sans-serif;
+    margin-right: 8px;
+    letter-spacing: -0.01em;
+  }
+
+  .drive-search-bar {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface2);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 0 16px;
+    height: 46px;
+    max-width: 720px;
+    flex: 1;
+    transition: all 0.2s;
+  }
+  .drive-search-bar:focus-within {
+    background: var(--surface);
+    border-color: var(--gdrive-blue);
+    box-shadow: 0 2px 8px rgba(26,115,232,0.15);
+  }
+
+  .drive-search-bar input {
+    background: none; border: none; outline: none;
+    color: var(--text); font-family: var(--font-body); font-size: 16px; font-weight: 500;
+    width: 100%;
+  }
+  .drive-search-bar input::placeholder { color: var(--text3); }
+
+  .drive-search-clear {
+    background: none; border: none; cursor: pointer; padding: 4px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .drive-topbar-right {
+    display: flex; align-items: center; gap: 12px;
+  }
+
+  .drive-user-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--gdrive-blue);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 500; color: white;
+    cursor: pointer;
+  }
+
+  /* ── Drive Layout ── */
+  .drive-layout {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ── Drive Left Sidebar ── */
+  .drive-sidebar {
+    width: 256px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    padding: 12px 0;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+
+  .drive-sidebar-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 24px;
+    font-size: 15px; font-weight: 500; color: var(--text2);
+    background: none; border: none; border-radius: 0 20px 20px 0;
+    cursor: pointer; width: 100%; text-align: left;
+    transition: background 0.15s;
+    font-family: var(--font-body);
+  }
+  .drive-sidebar-item:hover { background: var(--surface2); }
+  .drive-sidebar-item.active { background: #e8f0fe; color: var(--gdrive-blue); font-weight: 700; }
+
+  .drive-sidebar-divider {
+    height: 1px; background: var(--border);
+    margin: 12px 24px;
+  }
+
+  .drive-sidebar-section {
+    padding: 8px 24px;
+  }
+
+  .drive-sidebar-label {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--text3); margin-bottom: 4px;
+  }
+
+  .drive-sidebar-count {
+    font-size: 14px; font-weight: 600; color: var(--text2);
+  }
+
+  .drive-sidebar-signout {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 24px;
+    font-size: 13px; color: var(--text3);
+    background: none; border: none;
+    cursor: pointer; width: 100%; text-align: left;
+    transition: color 0.15s;
+    font-family: var(--font-body);
+  }
+  .drive-sidebar-signout:hover { color: var(--text); }
+
+  /* ── Drive Main Content ── */
+  .drive-main {
+    flex: 1;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    background: var(--surface);
+  }
+
+  .drive-loading {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: var(--text2); font-size: 14px;
+  }
+
+  /* ── Drive Content Toolbar ── */
+  .drive-content-toolbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .drive-checkbox-all {
+    background: none; border: none; cursor: pointer; padding: 4px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .drive-checkbox {
+    width: 18px; height: 18px; border-radius: 4px;
+    border: 2px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .drive-checkbox.checked {
+    background: var(--gdrive-blue);
+    border-color: var(--gdrive-blue);
+  }
+
+  .drive-toolbar-label {
+    font-size: 14px; font-weight: 700; color: var(--text);
+    flex: 1;
+  }
+
+  .drive-sync-btn {
+    border-radius: 20px;
+    padding: 8px 20px;
+  }
+
+  .btn-primary {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--gdrive-blue); border: none;
+    color: white; border-radius: var(--radius);
+    padding: 8px 16px; font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .btn-primary:hover { background: #1557b0; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Drive File List ── */
+  .drive-file-list {
+    flex: 1;
+    overflow-y: auto;
+  }
+  .drive-file-list::-webkit-scrollbar { width: 8px; }
+  .drive-file-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  .drive-file-list::-webkit-scrollbar-thumb:hover { background: var(--border2); }
+
+  .drive-file-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 16px;
+    border-bottom: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.1s;
+    min-height: 48px;
+  }
+  .drive-file-row:hover { background: var(--surface2); }
+  .drive-file-row.selected { background: #e8f0fe; }
+
+  .drive-file-checkbox {
+    display: flex; align-items: center; justify-content: center;
+    width: 24px; flex-shrink: 0;
+  }
+
+  .drive-file-icon {
+    width: 24px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .drive-file-name {
+    flex: 1; font-size: 15px; font-weight: 600; color: var(--text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  .drive-file-meta {
+    font-size: 14px; font-weight: 500; color: var(--text3);
+    width: 120px; text-align: right; flex-shrink: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     CHATGPT STYLE CHAT
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  .chat-screen {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--surface);
+  }
+
+  /* ── ChatGPT Top Bar ── */
+  .chatgpt-topbar {
     height: 52px;
     display: flex; align-items: center; justify-content: space-between;
     padding: 0 16px;
@@ -253,141 +360,143 @@ export const styles = `
     flex-shrink: 0;
   }
 
-  .chat-topbar-left { display: flex; align-items: center; gap: 12px; }
-  .topbar-back { background: none; border: 1px solid var(--border); color: var(--text2); border-radius: var(--radius); padding: 6px 10px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-family: var(--font-body); transition: all 0.15s; }
-  .topbar-back:hover { border-color: var(--border2); color: var(--text); }
+  .chatgpt-topbar-left {
+    display: flex; align-items: center; gap: 8px;
+  }
 
-  .chat-context-pill {
+  .chatgpt-back-btn {
+    background: none; border: none; color: var(--text2);
+    cursor: pointer; padding: 6px; border-radius: var(--radius);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .chatgpt-back-btn:hover { background: var(--surface2); color: var(--text); }
+
+  .chatgpt-model-label {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 800; font-size: 18px; color: var(--text);
+    letter-spacing: -0.01em;
+  }
+
+  .chatgpt-logo {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; color: white;
+  }
+
+  .chatgpt-context-pill {
     display: flex; align-items: center; gap: 6px;
     background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 20px; padding: 4px 10px 4px 6px;
-    font-size: 12px; color: var(--text2);
+    border-radius: 20px; padding: 5px 12px 5px 8px;
+    font-size: 13px; font-weight: 600; color: var(--text2);
   }
   .pill-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
 
-  .chat-layout {
-    flex: 1;
-    display: flex;
-    overflow: hidden;
-  }
-
-  /* ── Sidebar ── */
-  .chat-sidebar {
-    width: 260px;
-    border-right: 1px solid var(--border);
-    background: var(--surface);
-    display: flex; flex-direction: column;
-    flex-shrink: 0;
-    overflow: hidden;
-  }
-
-  .sidebar-section { padding: 16px; }
-  .sidebar-label { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text3); margin-bottom: 10px; }
-
-  .sidebar-file {
+  .chatgpt-topbar-right {
     display: flex; align-items: center; gap: 8px;
-    padding: 8px 10px; border-radius: var(--radius);
-    font-size: 13px; color: var(--text2);
-    transition: background 0.12s;
-    cursor: default;
   }
-  .sidebar-file:hover { background: var(--surface2); }
 
-  .sidebar-divider { height: 1px; background: var(--border); margin: 0 16px; }
-
-  .sidebar-hints { padding: 16px; flex: 1; overflow-y: auto; }
-  .hint-label { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text3); margin-bottom: 10px; }
-
-  .hint-chip {
-    display: block; width: 100%;
-    text-align: left;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 8px 10px;
-    font-size: 13px; color: var(--text2); font-family: var(--font-body);
-    cursor: pointer; margin-bottom: 6px;
-    transition: all 0.15s; line-height: 1.4;
+  .chatgpt-user-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: #5f6368;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 500; color: white;
   }
-  .hint-chip:hover { border-color: var(--accent); color: var(--text); background: rgba(16,163,127,0.05); }
+
+  /* ── ChatGPT Main Area ── */
+  .chatgpt-main {
+    flex: 1;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
 
   /* ── Messages ── */
-  .chat-main {
-    flex: 1;
-    display: flex; flex-direction: column;
-    overflow: hidden;
-  }
-
-  .messages-area {
+  .chatgpt-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 24px 24px 24px 32px;
-    display: flex; flex-direction: column; gap: 24px;
+    padding: 0;
     scroll-behavior: smooth;
   }
+  .chatgpt-messages::-webkit-scrollbar { width: 6px; }
+  .chatgpt-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .chatgpt-messages::-webkit-scrollbar-thumb:hover { background: var(--border2); }
 
-  .messages-area::-webkit-scrollbar { width: 6px; }
-  .messages-area::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
-  .messages-area::-webkit-scrollbar-thumb:hover { background: var(--border2); }
-
-  .msg {
-    display: flex; gap: 16px;
+  .chatgpt-msg {
+    padding: 24px 0;
     animation: msgIn 0.3s ease-out;
+  }
+  .chatgpt-msg.user {
+    background: transparent;
+  }
+  .chatgpt-msg.ai {
+    background: transparent;
   }
   @keyframes msgIn {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: none; }
   }
 
-  .msg.user { flex-direction: row-reverse; }
-
-  .msg-avatar {
-    width: 30px; height: 30px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
+  .chatgpt-msg-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
     flex-shrink: 0; font-size: 12px; font-weight: 600;
+    vertical-align: middle;
+    margin-right: 8px;
   }
-  .msg-avatar.ai {
+  .chatgpt-msg-avatar.ai {
     background: var(--accent);
-    color: white; font-family: var(--font-display);
+    color: white;
   }
-  .msg-avatar.user-av {
-    background: var(--text2);
+  .chatgpt-msg-avatar.user {
+    background: #5f6368;
     color: white;
   }
 
-  .msg-body { max-width: 700px; flex: 1; }
+  .chatgpt-msg-content {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
 
-  .msg-bubble {
-    padding: 0;
-    font-size: 15px; line-height: 1.6;
+  .chatgpt-msg-role {
+    font-size: 15px; font-weight: 700; color: var(--text);
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  .chatgpt-msg-text {
+    font-size: 17px; line-height: 1.8;
     color: var(--text);
+    font-weight: 500;
   }
-  .msg.ai .msg-bubble {
-    color: var(--text);
-  }
-  .msg.user .msg-bubble {
-    color: var(--text);
+  .chatgpt-msg-text strong { font-weight: 800; }
+  .chatgpt-msg-text code { background: var(--surface2); border-radius: 4px; padding: 2px 6px; font-size: 13px; font-family: 'Menlo', 'Monaco', monospace; }
+  .chatgpt-msg-text p { margin-bottom: 12px; }
+  .chatgpt-msg-text p:last-child { margin-bottom: 0; }
+
+  .chatgpt-sources {
+    margin-top: 16px;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
   }
 
-  .msg-bubble strong { font-weight: 600; }
-  .msg-bubble code { background: var(--surface2); border-radius: 4px; padding: 2px 6px; font-size: 13px; font-family: monospace; }
-
-  .msg-sources {
-    margin-top: 12px;
-    display: flex; flex-wrap: wrap; gap: 6px;
+  .chatgpt-sources-label {
+    font-size: 12px; font-weight: 500; color: var(--text3);
   }
 
-  .source-chip {
+  .chatgpt-source-chip {
     display: flex; align-items: center; gap: 5px;
     background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 20px; padding: 4px 10px;
-    font-size: 12px; color: var(--text2);
+    border-radius: 20px; padding: 5px 12px;
+    font-size: 13px; font-weight: 600; color: var(--text2);
+    cursor: pointer; transition: all 0.15s;
   }
-  .source-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .chatgpt-source-chip:hover { border-color: var(--accent); color: var(--accent); }
 
   .typing-indicator {
     display: flex; align-items: center; gap: 4px;
-    padding: 12px 16px;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: var(--radius);
+    padding: 4px 0;
   }
   .typing-dot {
     width: 6px; height: 6px; border-radius: 50%;
@@ -401,44 +510,68 @@ export const styles = `
     30% { transform: translateY(-4px); background: var(--accent); }
   }
 
-  /* ── Input ── */
-  .chat-input-area {
-    padding: 16px 24px 20px 32px;
-    border-top: 1px solid var(--border);
-    background: var(--surface);
+  /* ── ChatGPT Input Area ── */
+  .chatgpt-input-area {
+    padding: 0 24px 24px;
     flex-shrink: 0;
+    max-width: 748px;
+    width: 100%;
+    margin: 0 auto;
   }
 
-  .chat-input-box {
-    display: flex; align-items: flex-end; gap: 10px;
+  .chatgpt-hints {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 16px;
+    justify-content: center;
+  }
+
+  .chatgpt-hint-btn {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 12px 12px 12px 16px;
+    border-radius: 20px;
+    padding: 10px 18px;
+    font-size: 14px; font-weight: 600; color: var(--text2);
+    cursor: pointer; transition: all 0.15s;
+    font-family: var(--font-body);
+  }
+  .chatgpt-hint-btn:hover { border-color: var(--border2); color: var(--text); background: var(--surface2); }
+
+  .chatgpt-input-box {
+    display: flex; align-items: flex-end; gap: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 8px 8px 8px 20px;
     transition: border-color 0.2s;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
   }
-  .chat-input-box:focus-within { border-color: var(--border2); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  .chatgpt-input-box:focus-within {
+    border-color: var(--border2);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
 
-  .chat-textarea {
+  .chatgpt-textarea {
     flex: 1; background: none; border: none; outline: none;
-    color: var(--text); font-family: var(--font-body); font-size: 15px;
-    resize: none; line-height: 1.5; max-height: 200px;
-    min-height: 24px;
+    color: var(--text); font-family: var(--font-body); font-size: 17px; font-weight: 500;
+    resize: none; line-height: 1.6; max-height: 200px;
+    min-height: 24px; padding: 8px 0;
   }
-  .chat-textarea::placeholder { color: var(--text3); }
+  .chatgpt-textarea::placeholder { color: var(--text3); font-weight: 400; }
 
-  .send-btn {
-    width: 32px; height: 32px; border-radius: var(--radius);
+  .chatgpt-send-btn {
+    width: 32px; height: 32px; border-radius: 50%;
     background: var(--accent); border: none; color: white;
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; transition: all 0.15s;
     flex-shrink: 0;
   }
-  .send-btn:hover { background: var(--accent2); }
-  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .chatgpt-send-btn:hover { background: var(--accent2); }
+  .chatgpt-send-btn:disabled { background: var(--surface3); cursor: not-allowed; }
 
-  .chat-input-hint { text-align: center; font-size: 11px; color: var(--text3); margin-top: 8px; }
+  .chatgpt-input-hint {
+    text-align: center; font-size: 13px; font-weight: 500; color: var(--text3);
+    margin-top: 8px;
+  }
 
   /* ── Sync overlay ── */
   .sync-overlay {
@@ -470,8 +603,8 @@ export const styles = `
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .sync-title { font-family: var(--font-display); font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
-  .sync-sub { font-size: 13px; color: var(--text2); line-height: 1.5; }
+  .sync-title { font-family: var(--font-display); font-size: 18px; font-weight: 800; margin-bottom: 8px; color: var(--text); }
+  .sync-sub { font-size: 14px; font-weight: 500; color: var(--text2); line-height: 1.5; }
 
   .sync-progress { margin-top: 20px; }
   .sync-bar-bg { height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
@@ -483,7 +616,7 @@ export const styles = `
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
     padding: 40px; text-align: center; gap: 12px;
   }
-  .empty-state-icon { font-size: 36px; margin-bottom: 8px; opacity: 0.4; }
-  .empty-state h3 { font-family: var(--font-display); font-size: 16px; font-weight: 600; color: var(--text); }
-  .empty-state p { font-size: 13px; color: var(--text2); max-width: 320px; line-height: 1.6; }
+  .empty-state-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.4; }
+  .empty-state h3 { font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--text); }
+  .empty-state p { font-size: 15px; font-weight: 500; color: var(--text2); max-width: 320px; line-height: 1.6; }
 `;

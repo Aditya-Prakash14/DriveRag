@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { askQuestion } from "../utils/api";
 import { renderText } from "../utils/textUtils";
 import { Icon } from "../icons/Icon";
-import { DriveIcon } from "../icons/DriveIcon";
 
 export function ChatScreen({ user, files, onBack }) {
   const [messages, setMessages] = useState([
@@ -67,111 +66,103 @@ export function ChatScreen({ user, files, onBack }) {
 
   const autoResize = (e) => {
     e.target.style.height = "auto";
-    e.target.style.height = Math.min(e.target.scrollHeight, 140) + "px";
+    e.target.style.height = Math.min(e.target.scrollHeight, 200) + "px";
   };
+
+  const showHints = messages.length <= 1;
 
   return (
     <div className="chat-screen">
-      <div className="chat-topbar">
-        <div className="chat-topbar-left">
-          <button className="topbar-back" onClick={onBack}>
-            <Icon d="M19 12H5M12 19l-7-7 7-7" size={13} />
-            Drive
+      {/* ChatGPT style top bar */}
+      <div className="chatgpt-topbar">
+        <div className="chatgpt-topbar-left">
+          <button className="chatgpt-back-btn" onClick={onBack}>
+            <Icon d="M19 12H5M12 19l-7-7 7-7" size={16} />
           </button>
-          <div className="topbar-brand" style={{marginLeft:4}}>
-            <div className="topbar-logo">D</div>
-            <span className="topbar-name">DriveRAG</span>
+          <div className="chatgpt-model-label">
+            <div className="chatgpt-logo">D</div>
+            DriveRAG
           </div>
-          <div className="chat-context-pill">
+          <div className="chatgpt-context-pill">
             <div className="pill-dot" />
             {files.length} docs indexed
           </div>
         </div>
-        <div className="topbar-user">
-          <div className="avatar">{user.name[0]}</div>
-          <span className="avatar-name">{user.name}</span>
+        <div className="chatgpt-topbar-right">
+          <div className="chatgpt-user-avatar">{user.name[0]}</div>
         </div>
       </div>
 
-      <div className="chat-layout">
-        {/* Sidebar */}
-        <div className="chat-sidebar">
-          <div className="sidebar-section">
-            <div className="sidebar-label">Indexed Files</div>
-            {files.map(f => (
-              <div className="sidebar-file" key={f.id}>
-                <DriveIcon />
-                <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{f.name}</span>
+      {/* ChatGPT style main area - centered */}
+      <div className="chatgpt-main">
+        <div className="chatgpt-messages">
+          {messages.map(msg => (
+            <div className={`chatgpt-msg ${msg.role}`} key={msg.id}>
+              <div className={`chatgpt-msg-avatar ${msg.role === "ai" ? "ai" : "user"}`}>
+                {msg.role === "ai" ? "D" : user.name[0]}
               </div>
-            ))}
-          </div>
-          <div className="sidebar-divider" />
-          <div className="sidebar-hints">
-            <div className="hint-label">Try asking</div>
-            {HINTS.map((h, i) => (
-              <button className="hint-chip" key={i} onClick={() => send(h)}>{h}</button>
-            ))}
-          </div>
+              <div className="chatgpt-msg-content">
+                <div className="chatgpt-msg-role">{msg.role === "ai" ? "DriveRAG" : "You"}</div>
+                <div className="chatgpt-msg-text">
+                  {renderText(msg.text)}
+                </div>
+                {msg.sources && msg.sources.length > 0 && (
+                  <div className="chatgpt-sources">
+                    <span className="chatgpt-sources-label">Sources:</span>
+                    {msg.sources.map((s, i) => (
+                      <span className="chatgpt-source-chip" key={i}>
+                        <Icon d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" size={11} color="var(--accent)" />
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {loading && (
+            <div className="chatgpt-msg ai">
+              <div className="chatgpt-msg-avatar ai">D</div>
+              <div className="chatgpt-msg-content">
+                <div className="chatgpt-msg-role">DriveRAG</div>
+                <div className="typing-indicator">
+                  <div className="typing-dot" />
+                  <div className="typing-dot" />
+                  <div className="typing-dot" />
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
         </div>
 
-        {/* Chat main */}
-        <div className="chat-main">
-          <div className="messages-area">
-            {messages.map(msg => (
-              <div className={`msg ${msg.role}`} key={msg.id}>
-                <div className={`msg-avatar ${msg.role === "ai" ? "ai" : "user-av"}`}>
-                  {msg.role === "ai" ? "D" : user.name[0]}
-                </div>
-                <div className="msg-body">
-                  <div className="msg-bubble">
-                    {renderText(msg.text)}
-                  </div>
-                  {msg.sources && msg.sources.length > 0 && (
-                    <div className="msg-sources">
-                      {msg.sources.map((s, i) => (
-                        <span className="source-chip" key={i}>
-                          <Icon d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" size={11} color="var(--accent2)" />
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            {loading && (
-              <div className="msg ai">
-                <div className="msg-avatar ai">D</div>
-                <div className="msg-body">
-                  <div className="typing-indicator">
-                    <div className="typing-dot" />
-                    <div className="typing-dot" />
-                    <div className="typing-dot" />
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          <div className="chat-input-area">
-            <div className="chat-input-box">
-              <textarea
-                ref={textareaRef}
-                className="chat-textarea"
-                placeholder="Ask anything about your documents…"
-                rows={1}
-                value={input}
-                onChange={e => { setInput(e.target.value); autoResize(e); }}
-                onKeyDown={onKeyDown}
-              />
-              <button className="send-btn" onClick={() => send()} disabled={!input.trim() || loading}>
-                <Icon d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" size={16} color="white" />
-              </button>
+        {/* ChatGPT style input area - centered at bottom */}
+        <div className="chatgpt-input-area">
+          {showHints && (
+            <div className="chatgpt-hints">
+              {HINTS.map((h, i) => (
+                <button className="chatgpt-hint-btn" key={i} onClick={() => send(h)}>
+                  {h}
+                </button>
+              ))}
             </div>
-            <div className="chat-input-hint">Enter to send · Shift+Enter for new line</div>
+          )}
+          <div className="chatgpt-input-box">
+            <textarea
+              ref={textareaRef}
+              className="chatgpt-textarea"
+              placeholder="Ask anything about your documents…"
+              rows={1}
+              value={input}
+              onChange={e => { setInput(e.target.value); autoResize(e); }}
+              onKeyDown={onKeyDown}
+            />
+            <button className="chatgpt-send-btn" onClick={() => send()} disabled={!input.trim() || loading}>
+              <Icon d="M5 12h14M12 5l7 7-7 7" size={18} color={input.trim() && !loading ? "white" : "var(--text3)"} />
+            </button>
           </div>
+          <div className="chatgpt-input-hint">DriveRAG can make mistakes. Check important info in source documents.</div>
         </div>
       </div>
     </div>

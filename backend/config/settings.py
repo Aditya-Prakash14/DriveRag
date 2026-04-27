@@ -3,9 +3,9 @@ config/settings.py
 ──────────────────
 Central configuration loaded from .env.
 
-Using SentenceTransformers (all-MiniLM-L6-v2, 384d) — no API key needed
-for embeddings. OPENAI_API_KEY is only needed if you want GPT-generated
-answers; the system falls back to extractive answers without it.
+Using HashingVectorizer (1000d) — no API key needed for embeddings.
+GROQ_API_KEY is optional for LLM-generated answers;
+the system falls back to extractive answers without it.
 """
 import os
 from pathlib import Path
@@ -36,16 +36,16 @@ GOOGLE_SCOPES = [
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
 # ── LLM (optional) ────────────────────────────────────────────────────────────
-# Model to use with Groq (e.g., llama3-8b-8192, mixtral-8x7b-32768)
-LLM_MODEL = os.getenv("LLM_MODEL", "llama3-8b-8192")
+# Model to use with Groq (e.g., llama-3.3-70b-versatile, llama3-70b-8192)
+LLM_MODEL = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
 
 # ── Embedding ─────────────────────────────────────────────────────────────────
-# Model: TF-IDF (fallback, no API key needed, no segfault on macOS Python 3.13)
+# Model: HashingVectorizer (no API key needed, no segfault on macOS Python 3.13)
 # EMBEDDING_DIM must match the model output AND the FAISS index dimension.
 # If you change the model, delete data/faiss_index and data/chunks.json
 # so the index is rebuilt at the correct dimension.
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "tfidf")
-EMBEDDING_DIM = 1000  # TF-IDF vocabulary size
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "hashing")
+EMBEDDING_DIM = 1000  # HashingVectorizer feature count
 
 # ── Chunking ──────────────────────────────────────────────────────────────────
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "500"))
@@ -60,11 +60,8 @@ CREDENTIALS_DIR = DATA_DIR / "credentials"
 DATA_DIR.mkdir(exist_ok=True)
 CREDENTIALS_DIR.mkdir(exist_ok=True)
 
-# ── LLM (optional) ────────────────────────────────────────────────────────────
-# Without OPENAI_API_KEY the system returns extractive answers (top chunks).
-# Add the key to .env to get GPT-3.5/4 generated answers instead.
+# ── OpenAI API (optional - kept for backward compat) ─────────────────────────
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-LLM_MODEL = os.getenv("LLM_MODEL", "gpt-3.5-turbo")
 
 # ── CORS / Frontend ───────────────────────────────────────────────────────────
 ALLOWED_ORIGINS = os.getenv(
